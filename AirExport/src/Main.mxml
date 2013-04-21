@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+                       xmlns:s="library://ns.adobe.com/flex/spark"
+                       xmlns:mx="library://ns.adobe.com/flex/mx"
+					   width="520" height="560">
+    <fx:Script>
+        <![CDATA[
+			import flash.display.Loader;
+			import flash.display.LoaderInfo;
+			import flash.display.MovieClip;
+			import flash.events.Event;
+			import flash.events.IOErrorEvent;
+			import flash.events.MouseEvent;
+			import flash.events.MouseEvent;
+			import flash.filesystem.File;
+			import flash.net.FileFilter;
+			import flash.net.URLRequest;
+			import flash.system.Capabilities;
+			import spark.events.GridSelectionEvent;
+			
+			private var _file:File;
+			private var _movie:MovieClip;
+			private var _outputPath: File;
+			private var _sortBitmaps:Boolean;
+			
+			/*** Bt selecionar arquivo SWF ***/
+			private function btBrowserSWF_clickHandler(e:MouseEvent) :void {
+				_file = new File();
+				_file.addEventListener(Event.SELECT, file_select);
+                _file.browseForOpen("Please select a SWF file...", [
+					new FileFilter("Arquivos SWF (*.swf)", "*.swf") ]);
+			};
+			
+			private function file_select(e:Event):void {
+                lblNomeSWF.text = File(e.currentTarget).nativePath;
+				
+				//if( Capabilities.isDebugger )
+					_outputPath = File.desktopDirectory;
+				//else				
+				//	_outputPath = File.applicationDirectory;
+					
+				_sortBitmaps = true;
+				/*** CArrega Arquivo ***/
+				var loader:Loader = new Loader();
+				
+				loader.contentLoaderInfo.addEventListener( Event.COMPLETE, onLoaderComplete )
+				loader.load( new URLRequest( _file.url ) );				
+            }	
+			
+			private function onLoaderComplete( event:Event ) : void
+			{
+				var loaderInfo:LoaderInfo = LoaderInfo(event.target);
+				var file:File = new File();
+				file.url = loaderInfo.url;
+				
+				txtLog.text = "Loaded: " + file.nativePath + '\n' + txtLog.text;
+				
+				if( loaderInfo.contentType != "application/x-shockwave-flash" )
+				{
+					txtLog.text = "Invalid content type: " + loaderInfo.contentType + '\n' + txtLog.text;
+					return;
+				}
+				
+				_movie = MovieClip(loaderInfo.content);
+				
+				/** Loop em todo os movieClip do SWF ***/
+				for (var i:int, n:int = _movie.numChildren; i < n; ++i){
+					if (_movie.getChildAt(i) is MovieClip){
+						gridMovieClip.dataProvider.addItem({"movieClip":_movie.getChildAt(i).name})
+					}
+				}
+				
+				/** Click para preview **/
+				gridMovieClip.doubleClickEnabled = true;
+				gridMovieClip.addEventListener(MouseEvent.DOUBLE_CLICK, function (..._) :void {
+					// TODO: Click para Previe
+					for (var i:int, n:int = _movie.numChildren; i < n; ++i){
+						if (_movie.getChildAt(i) is MovieClip) {
+							if(gridMovieClip.selectedItem.movieClip == _movie.getChildAt(i).name){
+								trace('preview:' + _movie.getChildAt(i).name);
+							}
+						}
+					}
+				});	
+			}	
+			
+			/*** Bt Exportar ***/
+			private function btExportAll_clickHandler(e:MouseEvent) :void {
+				txtLog.text = "Start Export ("+ _outputPath.nativePath +")" + '\n' + txtLog.text;
+				for (var i:int, n:int = _movie.numChildren; i < n; ++i){
+					if (_movie.getChildAt(i) is MovieClip) {
+						
+						var exporter:Exporter = new Exporter( MovieClip(_movie.getChildAt(i)), _movie.getChildAt(i).name );
+						
+						exporter.export( _outputPath, _sortBitmaps, assetManager.selected );
+											
+						txtLog.text = "Export:" + _outputPath.nativePath + '/' + _movie.getChildAt(i).name + '\n' + txtLog.text;
+					}
+				}				
+			};
+			
+			/*
+			protected function exportAll (modifiedOnly :Boolean) :void {
+				for each (var status :DocStatus in _flashDocsGrid.dataProvider.toArray()) {
+					if (status.isValid && (!modifiedOnly || status.isModified)) {
+						exportFlashDocument(status);
+					}
+				}
+			}*/			
+			
+        ]]>
+    </fx:Script>
+	
+	<s:layout>
+		<s:VerticalLayout paddingLeft="20" paddingTop="20" paddingRight="20" paddingBottom="20"/>
+	</s:layout>
+    
+    <s:VGroup>
+        <s:FormItem label="Select SWF" width="150">
+          <s:HGroup>
+            <!-- Explicitly set the width to make it line up with the export form -->
+            <s:Label id="lblNomeSWF" width="340"/>
+            <s:Button id="btBrowserSWF" width="50" click="btBrowserSWF_clickHandler(event);" label="..."/>
+          </s:HGroup>
+        </s:FormItem>
+
+		<s:DataGrid id="gridMovieClip" width="480" height="300">
+		  <s:typicalItem>
+			<s:DataItem path="multiple/segment/nested/path/of/some/depth" modified="" valid=""/>
+		  </s:typicalItem>
+		  <s:columns>
+			<s:ArrayList>
+			  <s:GridColumn dataField="movieClip" headerText="MovieClip"/>
+			</s:ArrayList>
+		  </s:columns>
+		  <mx:ArrayCollection/>
+		</s:DataGrid>
+		
+		<mx:VBox>
+			<mx:CheckBox id="assetManager" width="300" label="Export use assetManager? (3 Files)" selected="true" /> 
+		</mx:VBox>		
+        <s:FormItem width="500">
+			<s:Button id="btExportAll" click="btExportAll_clickHandler(event);" label="Export All"/>		   
+        </s:FormItem>	
+		
+		<s:TextArea id="txtLog" width="480" height="150">
+		</s:TextArea>		
+	
+	</s:VGroup>
+		
+</s:Application>
