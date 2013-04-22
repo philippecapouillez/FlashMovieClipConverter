@@ -35,11 +35,12 @@ package ssmit
 		private var _currentFrameLabel	: String;
 		private var _currentLabel		: String;
 		
+		public var loop					: Boolean = false;
 		
 		// Creates a new ConvertedMovieClip.
 		public function ConvertedMovieClip()
 		{
-			frameRate = 60;
+			frameRate = 24;
 			_frameTime = 0;
 			_globalFrame = -1;
 			
@@ -54,14 +55,18 @@ package ssmit
 		{
 			super.dispose();
 			
+			this.stop();
+			
 			if( _juggler != null )
 			{
 				_juggler.purge();
 				_juggler = null;
 			}
 			
-			_frameData.dispose();
-			_frameData = null;
+			if ( _frameData != null ){
+				_frameData.dispose();
+				_frameData = null;
+			}
 			
 			// Clear out the texture atlases.
 			if( textureAtlases != null )
@@ -114,10 +119,13 @@ package ssmit
 					++targetFrame;
 					if( targetFrame > _lastSceneFrame )
 					{
-//						if( loop )
+						if( loop )
 							targetFrame = _firstSceneFrame;
-//						else
-//							targetFrame = _lastSceneFrame;
+						else{
+							targetFrame = _lastSceneFrame;
+							_isPlaying = false;
+							dispatchEvent(new ConvertedMovieEvent(ConvertedMovieEvent.ANI_COMPLETE));
+						}
 					}
 					_frameTime -= frameDuration;
 				}
@@ -128,7 +136,8 @@ package ssmit
 			}
 
 			// Advance the time of the children, even if this MovieClip is stopped. 
-			_juggler.advanceTime( time ); 
+			if(_juggler)
+				_juggler.advanceTime( time ); 
 		}
 		
 		
@@ -379,10 +388,10 @@ package ssmit
 			var targetFrame:int = _globalFrame + 1;
 			if( targetFrame > _lastSceneFrame )
 			{
-//				if( loop )
+				if( loop )
 					targetFrame = _firstSceneFrame;
-//				else
-//					targetFrame = _lastSceneFrame;
+				else
+					targetFrame = _lastSceneFrame;
 			}
 			
 			_isPlaying = false;
@@ -401,10 +410,10 @@ package ssmit
 			var targetFrame:int = _globalFrame - 1;
 			if( targetFrame < _firstSceneFrame )
 			{
-//				if( loop )
+				if( loop )
 					targetFrame = _lastSceneFrame;
-//				else
-//					targetFrame = _firstSceneFrame;
+				else
+					targetFrame = _firstSceneFrame;
 			}
 			
 			_isPlaying = false;
